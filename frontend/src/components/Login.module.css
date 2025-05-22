@@ -1,0 +1,49 @@
+/* Login.module.css */
+.container {
+    background-color: #ffffff; /* Nền trắng cho form */
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: 2rem auto;
+}
+
+.title {
+    color: var(--primary-green-accent); /* Sử dụng biến CSS đã định nghĩa */
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.formGroup {
+    margin-bottom: 1rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.formGroup input {
+    width: calc(100% - 20px); /* Trừ padding */
+    padding: 10px;
+    border: 1px solid var(--grey-medium);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.button {
+    background-color: var(--primary-green-accent);
+    color: var(--text-light);
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.button:hover {
+    background-color: #388E3C; /* Màu xanh đậm hơn khi hover */
+}

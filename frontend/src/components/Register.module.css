@@ -1,0 +1,106 @@
+/* frontend/src/components/Register.module.css (HOẶC Login.module.css) */
+/* BỎ PHẦN :root { ... } Ở ĐÂY */
+
+.container {
+    background-color: var(--card-background);
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: var(--box-shadow-strong);
+    width: 100%;
+    max-width: 450px;
+    margin: 20px auto;
+    text-align: left;
+}
+
+.title {
+    color: var(--primary-green);
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.formGroup {
+    margin-bottom: 20px;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555; /* Có thể dùng var(--text-dark) hoặc một màu xám cụ thể */
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color); /* Input sẽ có màu viền ở đây */
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+    /* Thêm dòng này để đảm bảo input có nền trắng và chữ đen mặc định */
+    background-color: #fff; /* Hoặc var(--card-background) nếu muốn đồng bộ */
+    color: var(--text-dark);
+    /* Bỏ dòng transition: border-color 0.3s ease, box-shadow 0.3s ease;
+       nếu bạn không muốn hiệu ứng này hoặc nó gây ra vấn đề hiển thị ban đầu.
+       Hoặc đảm bảo các giá trị mặc định của border và box-shadow là những gì bạn muốn thấy.
+    */
+}
+
+
+
+.button {
+    background-color: var(--primary-green); /* Nút sẽ có màu nền xanh */
+    color: var(--text-light); /* Chữ trên nút sẽ màu trắng */
+    padding: 14px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+
+
+    width: 100%;
+    text-transform: uppercase;
+
+}
+
+.button:hover {
+    background-color: var(--primary-green-dark);
+}
+
+
+
+.message {
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 15px;
+}
+
+.errorMessage {
+    background-color: #ffebee;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+}
+
+.successMessage {
+    background-color: var(--primary-light-green);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+.navigationLink {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.navigationLink a {
+    color: var(--primary-green);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.navigationLink a:hover {
+    text-decoration: underline;
+}
