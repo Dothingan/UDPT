@@ -5,111 +5,154 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.65); /* Tăng độ mờ overlay */
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000; /* Đảm bảo modal nổi lên trên */
+    z-index: 1000;
+    padding: 15px; /* Thêm padding để modal không sát viền màn hình nhỏ */
 }
 
 .modalContent {
     background-color: white;
-    padding: 25px 30px;
+    padding: 20px 25px; /* Giảm padding một chút */
     border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.35);
     width: 100%;
-    max-width: 550px; /* Giới hạn chiều rộng modal */
+    max-width: 500px; /* Giảm max-width một chút */
     max-height: 90vh;
     overflow-y: auto;
+    position: relative; /* Để định vị nút đóng X */
 }
+
+.closeButtonTop {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.8em;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.closeButtonTop:hover {
+    color: #333;
+}
+
 
 .modalTitle {
     color: var(--primary-green, #4CAF50);
     text-align: center;
     margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 1.8em;
+    margin-bottom: 15px; /* Giảm margin */
+    font-size: 1.6em; /* Điều chỉnh font size */
 }
 
 .appointmentInfo {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: var(--primary-light-green, #f0f9f0);
+    margin-bottom: 15px;
+    padding: 12px;
+    background-color: #f9f9f9; /* Màu nền nhẹ hơn */
     border-radius: 6px;
-    border-left: 4px solid var(--primary-green, #4CAF50);
+    border-left: 4px solid var(--primary-green-dark, #388E3C);
 }
 
 .appointmentInfo p {
-    margin: 8px 0;
-    font-size: 1em;
-    color: #333;
+    margin: 6px 0;
+    font-size: 0.95em; /* Điều chỉnh font size */
+    color: #444;
 }
 
 .appointmentInfo p strong {
-    color: #111;
-    min-width: 100px;
+    color: #222;
+    min-width: 90px;
     display: inline-block;
 }
 
 .divider {
     border: 0;
     height: 1px;
-    background-color: var(--border-color, #eee);
-    margin: 25px 0;
+    background-color: #e0e0e0; /* Màu divider nhạt hơn */
+    margin: 20px 0;
 }
 
 .sectionTitle {
-    font-size: 1.3em;
+    font-size: 1.2em;
     color: var(--text-dark, #333);
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     padding-bottom: 5px;
-    border-bottom: 2px solid var(--primary-green, #4CAF50);
+    border-bottom: 1px solid #e0e0e0; /* Border nhạt hơn */
 }
 
 .formGroup {
-    margin-bottom: 18px;
+    margin-bottom: 15px;
 }
 
 .formGroup label {
     display: block;
     font-weight: 500;
-    margin-bottom: 6px;
-    color: #444;
+    margin-bottom: 5px;
+    font-size: 0.9em; /* Điều chỉnh font size */
+    color: #333;
 }
 
 .inputField,
 .textareaField {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border-color, #ccc);
+    padding: 9px 12px;
+    border: 1px solid #ccc; /* Border nhạt hơn */
     border-radius: 4px;
-    font-size: 1em;
+    font-size: 0.95em;
     box-sizing: border-box;
 }
 
 .inputField[readOnly] {
-    background-color: #f5f5f5;
+    background-color: #f0f0f0; /* Màu nền cho input readonly */
     cursor: not-allowed;
+    color: #777;
 }
 
 .textareaField {
-    min-height: 70px;
+    min-height: 60px; /* Giảm chiều cao textarea */
     resize: vertical;
 }
 
+/* Style cho message bên trong modal */
+.modalMessage {
+    text-align: center;
+    margin-top: 15px;
+    margin-bottom: 15px; /* Thêm margin bottom */
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+.successMessageModal {
+    background-color: var(--primary-light-green, #e8f5e9);
+    color: var(--success-color, #388e3c);
+    border: 1px solid var(--success-color, #388e3c);
+}
+.errorMessageModal {
+    background-color: #ffebee;
+    color: var(--error-color, #d32f2f);
+    border: 1px solid var(--error-color, #d32f2f);
+}
+
+
 .modalActions {
-    margin-top: 30px;
+    margin-top: 25px;
     display: flex;
-    justify-content: flex-end; /* Đẩy nút về bên phải */
-    gap: 15px;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 .confirmButton,
 .cancelButton {
-    padding: 10px 20px;
+    padding: 9px 18px;
     border: none;
-    border-radius: 5px;
-    font-size: 1em;
+    border-radius: 4px;
+    font-size: 0.95em;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s ease, opacity 0.2s ease;
@@ -128,12 +171,12 @@
 }
 
 .cancelButton {
-    background-color: #f0f0f0;
-    color: #555;
-    border: 1px solid #ccc;
+    background-color: #e0e0e0; /* Màu nền cho nút hủy */
+    color: #333;
+    /* border: 1px solid #bbb; */ /* Có thể bỏ border này */
 }
 .cancelButton:hover {
-    background-color: #e0e0e0;
+    background-color: #c7c7c7;
 }
 .cancelButton:disabled {
     opacity: 0.7;

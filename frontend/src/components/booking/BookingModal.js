@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import styles from './BookingModal.module.css';
 
-function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBooking, isSubmitting }) {
+// Thêm prop 'statusMessage' để nhận thông báo từ DoctorProfile
+function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBooking, isSubmitting, statusMessage }) {
     const { user } = useAuth();
     const [reasonForVisit, setReasonForVisit] = useState('');
     const [patientFullName, setPatientFullName] = useState('');
@@ -11,13 +12,14 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
 
     useEffect(() => {
         if (show && user) {
-            // Ưu tiên thông tin từ patientProfile nếu có, sau đó đến thông tin từ user (AuthContext)
             setPatientFullName(patientProfile?.full_name || user?.displayName || user?.email?.split('@')[0] || '');
-            setPatientPhoneNumber(patientProfile?.phone_number || ''); // Lấy SĐT từ patientProfile
+            setPatientPhoneNumber(patientProfile?.phone_number || '');
         }
-        // Reset reason for visit khi modal mở hoặc khi slot thay đổi
-        setReasonForVisit('');
-    }, [show, user, patientProfile, slot]); // Thêm slot vào dependency array
+        // Reset reason for visit khi modal mở hoặc khi slot/doctor thay đổi (nếu cần)
+        if (show) {
+            setReasonForVisit('');
+        }
+    }, [show, user, patientProfile, slot]); // Thêm slot để reset reasonForVisit khi slot thay đổi
 
     if (!show) {
         return null;
@@ -26,7 +28,7 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
     const handleSubmit = (e) => {
         e.preventDefault();
         onSubmitBooking({
-            patient_full_name: patientFullName, // Gửi cả tên và SĐT
+            patient_full_name: patientFullName,
             patient_phone_number: patientPhoneNumber,
             reason_for_visit: reasonForVisit,
         });
@@ -39,19 +41,25 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        // Đảm bảo dateString là YYYY-MM-DD hoặc có thể parse được bởi new Date()
+        try {
+            const date = new Date(dateString + (dateString.includes('T') ? '' : 'T00:00:00')); // Thêm giờ nếu chỉ có ngày
+            return date.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        } catch (e) {
+            return dateString; // Trả về nguyên bản nếu không parse được
+        }
     };
 
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
+                <button onClick={onClose} className={styles.closeButtonTop} disabled={isSubmitting}>&times;</button>
                 <h2 className={styles.modalTitle}>Xác Nhận Đặt Lịch Khám</h2>
 
                 <div className={styles.appointmentInfo}>
                     <p><strong>Bác sĩ:</strong> {doctor?.full_name}</p>
                     <p><strong>Chuyên khoa:</strong> {doctor?.speciality_name || 'N/A'}</p>
-                    <p><strong>Phòng khám:</strong> {doctor?.clinic_name || 'N/A'}</p>
+                    {/* <p><strong>Phòng khám:</strong> {doctor?.clinic_name || 'N/A'}</p> */}
                     <p><strong>Ngày khám:</strong> {formatDate(slot?.schedule_date)}</p>
                     <p><strong>Giờ khám:</strong> {formatTime(slot?.start_time)} - {formatTime(slot?.end_time)}</p>
                 </div>
@@ -66,9 +74,9 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
                             type="text"
                             id="patientName"
                             value={patientFullName}
-                            onChange={(e) => setPatientFullName(e.target.value)} // Cho phép thay đổi
+                            onChange={(e) => setPatientFullName(e.target.value)}
                             className={styles.inputField}
-                            required // Có thể đặt là bắt buộc
+                            required
                         />
                     </div>
                     <div className={styles.formGroup}>
@@ -77,7 +85,7 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
                             type="email"
                             id="patientEmail"
                             value={user?.email || ''}
-                            readOnly // Email tài khoản thường không cho sửa ở đây
+                            readOnly
                             className={styles.inputField}
                         />
                     </div>
@@ -87,9 +95,9 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
                             type="tel"
                             id="patientPhone"
                             value={patientPhoneNumber}
-                            onChange={(e) => setPatientPhoneNumber(e.target.value)} // Cho phép thay đổi
+                            onChange={(e) => setPatientPhoneNumber(e.target.value)}
                             className={styles.inputField}
-                            required // Có thể đặt là bắt buộc
+                            required
                         />
                     </div>
                     <div className={styles.formGroup}>
@@ -102,6 +110,17 @@ function BookingModal({ show, onClose, doctor, slot, patientProfile, onSubmitBoo
                             className={styles.textareaField}
                         ></textarea>
                     </div>
+
+                    {/* Hiển thị statusMessage bên trong modal */}
+                    {statusMessage && (
+                        <p className={`${styles.modalMessage} ${
+                            statusMessage.includes('thất bại') || statusMessage.includes('Lỗi:')
+                                ? styles.errorMessageModal
+                                : styles.successMessageModal
+                        }`}>
+                            {statusMessage}
+                        </p>
+                    )}
 
                     <div className={styles.modalActions}>
                         <button type="button" onClick={onClose} className={styles.cancelButton} disabled={isSubmitting}>
