@@ -165,3 +165,27 @@
 .backLink:hover {
     text-decoration: underline;
 }
+/* frontend/src/components/doctor/DoctorProfile.module.css */
+/* ... (tất cả các style cũ của bạn) ... */
+
+.bookingMessage {
+    text-align: center;
+    padding: 10px;
+    margin: 15px 0;
+    border-radius: 4px;
+    font-weight: 500;
+    background-color: var(--primary-light-green, #e8f5e9); /* Màu nền cho thông báo thành công/đang xử lý */
+    color: var(--primary-green-dark, #388E3C); /* Màu chữ */
+    border: 1px solid var(--primary-green, #4CAF50);
+}
+
+/* Bạn có thể tạo thêm class riêng nếu muốn phân biệt màu cho lỗi đặt lịch */
+.bookingMessage.error { /* Ví dụ nếu bạn muốn set class error cho bookingMessage */
+    background-color: #ffebee;
+    color: var(--error-color, red);
+    border: 1px solid var(--error-color, red);
+}
+
+.slotItem span { /* Để chữ và nút cách nhau */
+    margin-right: 15px;
+}

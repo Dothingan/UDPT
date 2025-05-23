@@ -15,6 +15,7 @@
     font-size: 2em;
 }
 
+/* --- Chế độ xem --- */
 .profileDetails {
     margin-bottom: 30px;
 }
@@ -22,6 +23,7 @@
 .detailItem {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start; /* Canh đều nếu text dài */
     padding: 12px 0;
     border-bottom: 1px solid var(--border-color, #eee);
     font-size: 1.05em;
@@ -35,7 +37,8 @@
     font-weight: 600;
     color: var(--text-dark, #333);
     margin-right: 15px;
-    flex-basis: 30%; /* Cho label có độ rộng cố định */
+    flex-basis: 30%;
+    min-width: 150px; /* Giúp các label thẳng hàng hơn */
 }
 
 .value {
@@ -45,6 +48,92 @@
     word-break: break-word;
 }
 
+/* --- Chế độ chỉnh sửa --- */
+.editForm {
+    margin-top: 20px;
+}
+
+.formGroup {
+    margin-bottom: 20px;
+}
+
+.formGroup label { /* Style chung cho label trong formGroup */
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #444;
+}
+
+.inputField,
+.textareaField,
+.selectField { /* Thêm selectField nếu cần */
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.textareaField {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.inputField:focus,
+.textareaField:focus,
+.selectField:focus {
+    border-color: var(--primary-green, #4CAF50);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    outline: none;
+}
+
+.formActions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end; /* Đẩy nút về bên phải */
+    gap: 15px;
+}
+
+.saveButton,
+.cancelButton {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.saveButton {
+    background-color: var(--primary-green, #4CAF50);
+    color: white;
+}
+.saveButton:hover {
+    background-color: var(--primary-green-dark, #388E3C);
+}
+.saveButton:disabled {
+    background-color: #a5d6a7; /* Màu nhạt hơn khi disable */
+    cursor: not-allowed;
+}
+
+.cancelButton {
+    background-color: #f0f0f0;
+    color: #555;
+    border: 1px solid #ccc;
+}
+.cancelButton:hover {
+    background-color: #e0e0e0;
+}
+.cancelButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+
+/* --- Thông báo và các nút chung --- */
 .loading, .error, .noProfile {
     text-align: center;
     font-size: 1.2em;
@@ -54,11 +143,37 @@
 
 .error {
     color: var(--error-color, red);
+    border: 1px solid var(--error-color, red);
+    background-color: #ffebee;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
 }
 
-.actions {
+.message {
     text-align: center;
-    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+.successMessage {
+    background-color: var(--primary-light-green, #e8f5e9);
+    color: var(--success-color, #388e3c);
+    border: 1px solid var(--success-color, #388e3c);
+}
+.errorMessage { /* Dùng cho thông báo lỗi từ server, khác với .error cho lỗi tải trang */
+    background-color: #ffebee;
+    color: var(--error-color, #d32f2f);
+    border: 1px solid var(--error-color, #d32f2f);
+}
+
+
+.actions { /* Dùng cho các nút ở chế độ xem */
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color, #eee);
 }
 
 .actionButton, .actionLink {
@@ -70,17 +185,18 @@
     cursor: pointer;
     font-size: 1em;
     text-decoration: none;
-    margin: 0 10px;
+    margin: 5px 10px;
     transition: background-color 0.2s ease;
+    display: inline-block;
 }
 
 .actionButton:hover, .actionLink:hover {
     background-color: var(--primary-green-dark, #388E3C);
 }
 
-.actionLink {
-    background-color: #555; /* Màu khác cho link xem tiền sử bệnh */
+.actionLink { /* Link Xem Tiền Sử Bệnh */
+    background-color: #607d8b; /* Màu xám xanh */
 }
 .actionLink:hover {
-    background-color: #333;
+    background-color: #455a64;
 }

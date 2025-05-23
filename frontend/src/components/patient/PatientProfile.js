@@ -1,20 +1,35 @@
 // frontend/src/components/patient/PatientProfile.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // Để kiểm tra đăng nhập và lấy thông tin user
-import { getMyPatientProfile } from '../../services/patientService'; // Service vừa tạo
-import styles from './PatientProfile.module.css'; // Tạo file CSS Module này
+import { useAuth } from '../../context/AuthContext';
+import { getMyPatientProfile, updatePatientProfile } from '../../services/patientService';
+import styles from './PatientProfile.module.css';
 
 function PatientProfile() {
-    const { user, isAuthenticated, token } = useAuth(); // Lấy user, token và trạng thái xác thực
+    const { user, isAuthenticated, token } = useAuth();
     const [patientProfile, setPatientProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    // State cho chế độ chỉnh sửa và dữ liệu form
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState({
+        full_name: '',
+        date_of_birth: '',
+        gender: '',
+        phone_number: '',
+        address: '',
+        blood_type: '',
+        allergies: '',
+        chronic_conditions: ''
+    });
+    const [updateMessage, setUpdateMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+
     useEffect(() => {
         if (!isAuthenticated || !token) {
-            // Nếu chưa đăng nhập, chuyển về trang login và lưu lại trang muốn vào
             navigate('/login', { state: { from: '/my-profile' } });
             return;
         }
@@ -22,18 +37,29 @@ function PatientProfile() {
         const fetchProfile = async () => {
             try {
                 setLoading(true);
-                const data = await getMyPatientProfile(); // Gọi API lấy hồ sơ
-                setPatientProfile(data);
                 setError('');
+                setUpdateMessage('');
+                const data = await getMyPatientProfile();
+                setPatientProfile(data);
+                // Nạp dữ liệu vào formData khi lấy được profile
+                if (data) {
+                    setFormData({
+                        full_name: data.full_name || '',
+                        date_of_birth: data.date_of_birth ? data.date_of_birth.split('T')[0] : '', // Định dạng YYYY-MM-DD cho input type="date"
+                        gender: data.gender || '',
+                        phone_number: data.phone_number || '',
+                        address: data.address || '',
+                        blood_type: data.blood_type || '',
+                        allergies: data.allergies || '',
+                        chronic_conditions: data.chronic_conditions || ''
+                    });
+                }
             } catch (err) {
                 if (err.status === 404) {
-                    // Backend trả về 404 nếu chưa có hồ sơ, có thể cho phép tạo mới
-                    setError('Bạn chưa có hồ sơ bệnh nhân. Bạn có muốn tạo hồ sơ mới không?');
-                    // setPatientProfile(null); // Đảm bảo profile là null
+                    setError('Bạn chưa có hồ sơ bệnh nhân.');
                 } else if (err.requiresLogin) {
                     navigate('/login', { state: { from: '/my-profile' } });
-                }
-                else {
+                } else {
                     setError(err.message || 'Không thể tải hồ sơ bệnh nhân.');
                 }
                 console.error("Error in fetchProfile:", err);
@@ -45,92 +71,204 @@ function PatientProfile() {
         fetchProfile();
     }, [isAuthenticated, token, navigate]);
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditToggle = () => {
+        if (!isEditing && patientProfile) {
+            // Khi bắt đầu chỉnh sửa, nạp lại dữ liệu mới nhất từ patientProfile vào form
+            setFormData({
+                full_name: patientProfile.full_name || '',
+                date_of_birth: patientProfile.date_of_birth ? patientProfile.date_of_birth.split('T')[0] : '',
+                gender: patientProfile.gender || '',
+                phone_number: patientProfile.phone_number || '',
+                address: patientProfile.address || '',
+                blood_type: patientProfile.blood_type || '',
+                allergies: patientProfile.allergies || '',
+                chronic_conditions: patientProfile.chronic_conditions || ''
+            });
+        }
+        setIsEditing(!isEditing);
+        setUpdateMessage(''); // Xóa thông báo cũ khi chuyển chế độ
+        setError(''); // Xóa lỗi cũ
+    };
+
+    const handleSubmitUpdate = async (e) => {
+        e.preventDefault();
+        if (!patientProfile || !patientProfile.id) {
+            setUpdateMessage('Không tìm thấy ID bệnh nhân để cập nhật.');
+            return;
+        }
+        setIsSubmitting(true);
+        setUpdateMessage('');
+        try {
+            // Chỉ gửi các trường có giá trị, hoặc gửi tất cả tùy theo API backend của bạn
+            // Backend API (PUT /patients/:patientId) đã được thiết kế để chỉ cập nhật các trường được cung cấp
+            const updatedData = await updatePatientProfile(patientProfile.id, formData);
+            setPatientProfile(prev => ({ ...prev, ...formData })); // Cập nhật profile hiển thị ngay
+            setUpdateMessage(updatedData.message || 'Cập nhật hồ sơ thành công!');
+            setIsEditing(false); // Thoát chế độ chỉnh sửa
+        } catch (err) {
+            setUpdateMessage(err.message || 'Cập nhật hồ sơ thất bại.');
+            console.error("Error updating profile:", err);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN'); // Định dạng ngày tháng theo kiểu Việt Nam
+        // Kiểm tra xem dateString có phải là định dạng YYYY-MM-DD không
+        if (dateString.includes('T')) { // Nếu là ISO string từ server
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
+        }
+        // Nếu đã là YYYY-MM-DD (từ input type="date")
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateString; // Trả về nguyên bản nếu không khớp
     };
+
 
     if (loading) {
         return <div className={styles.loading}>Đang tải hồ sơ của bạn...</div>;
     }
 
-    if (error && !patientProfile) { // Chỉ hiển thị lỗi nếu không có profile và có lỗi
+    if (error && !patientProfile) {
         return (
             <div className={styles.container}>
                 <p className={styles.error}>{error}</p>
-                {error.includes("tạo hồ sơ mới") && (
-                    <button onClick={() => navigate('/create-patient-profile')} className={styles.actionButton}>
-                        Tạo Hồ Sơ Mới
-                    </button>
-                )}
+                {/* Nút tạo hồ sơ có thể được đặt ở một trang riêng biệt */}
+                {/* <button onClick={() => navigate('/create-patient-profile')} className={styles.actionButton}>
+                    Tạo Hồ Sơ Mới
+                </button> */}
             </div>
         );
     }
 
-    if (!patientProfile) {
-        // Trường hợp này có thể xảy ra nếu API trả về null/undefined mà không lỗi, hoặc chưa kịp set lỗi
+    if (!patientProfile && !isEditing) { // Nếu không có profile và không đang edit (ví dụ sau khi fetch lỗi nhưng ko set error)
         return (
             <div className={styles.container}>
-                <p className={styles.noProfile}>Không tìm thấy thông tin hồ sơ bệnh nhân.</p>
-                <button onClick={() => navigate('/create-patient-profile')} className={styles.actionButton}>
+                <p className={styles.noProfile}>Không tìm thấy thông tin hồ sơ bệnh nhân hoặc bạn chưa tạo hồ sơ.</p>
+                {/* <button onClick={() => navigate('/create-patient-profile')} className={styles.actionButton}>
                     Tạo Hồ Sơ Mới
-                </button>
+                </button> */}
             </div>
         );
     }
 
-    // Hiển thị thông tin hồ sơ
     return (
         <div className={styles.container}>
             <h2 className={styles.title}>Hồ Sơ Bệnh Nhân</h2>
-            <div className={styles.profileDetails}>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Họ và tên:</span>
-                    <span className={styles.value}>{patientProfile.full_name}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Email (tài khoản):</span>
-                    <span className={styles.value}>{user?.email}</span> {/* Email từ AuthContext */}
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Ngày sinh:</span>
-                    <span className={styles.value}>{formatDate(patientProfile.date_of_birth)}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Giới tính:</span>
-                    <span className={styles.value}>{patientProfile.gender || 'N/A'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Số điện thoại:</span>
-                    <span className={styles.value}>{patientProfile.phone_number || 'N/A'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Địa chỉ:</span>
-                    <span className={styles.value}>{patientProfile.address || 'N/A'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Nhóm máu:</span>
-                    <span className={styles.value}>{patientProfile.blood_type || 'N/A'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Dị ứng:</span>
-                    <span className={styles.value}>{patientProfile.allergies || 'Không có'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                    <span className={styles.label}>Bệnh mãn tính:</span>
-                    <span className={styles.value}>{patientProfile.chronic_conditions || 'Không có'}</span>
-                </div>
-            </div>
-            <div className={styles.actions}>
-                <button
-                    onClick={() => navigate(`/my-profile/edit`)} // Sẽ tạo trang này sau
-                    className={styles.actionButton}
-                >
-                    Chỉnh Sửa Hồ Sơ
-                </button>
-                <Link to="/my-profile/history" className={styles.actionLink}>Xem Tiền Sử Bệnh</Link>
-            </div>
+
+            {updateMessage && (
+                <p className={`${styles.message} ${updateMessage.includes('thất bại') ? styles.errorMessage : styles.successMessage}`}>
+                    {updateMessage}
+                </p>
+            )}
+
+            {!isEditing ? (
+                // Chế độ xem thông tin
+                <>
+                    <div className={styles.profileDetails}>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Họ và tên:</span>
+                            <span className={styles.value}>{patientProfile?.full_name}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Email (tài khoản):</span>
+                            <span className={styles.value}>{user?.email}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Ngày sinh:</span>
+                            <span className={styles.value}>{formatDate(patientProfile?.date_of_birth)}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Giới tính:</span>
+                            <span className={styles.value}>{patientProfile?.gender || 'N/A'}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Số điện thoại:</span>
+                            <span className={styles.value}>{patientProfile?.phone_number || 'N/A'}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Địa chỉ:</span>
+                            <span className={styles.value}>{patientProfile?.address || 'N/A'}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Nhóm máu:</span>
+                            <span className={styles.value}>{patientProfile?.blood_type || 'N/A'}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Dị ứng:</span>
+                            <span className={styles.value}>{patientProfile?.allergies || 'Không có'}</span>
+                        </div>
+                        <div className={styles.detailItem}>
+                            <span className={styles.label}>Bệnh mãn tính:</span>
+                            <span className={styles.value}>{patientProfile?.chronic_conditions || 'Không có'}</span>
+                        </div>
+                    </div>
+                    <div className={styles.actions}>
+                        <button onClick={handleEditToggle} className={styles.actionButton}>
+                            Chỉnh Sửa Hồ Sơ
+                        </button>
+                        <Link to="/my-medical-history" className={styles.actionLink}>Xem Tiền Sử Bệnh</Link>
+                    </div>
+                </>
+            ) : (
+                // Chế độ chỉnh sửa thông tin
+                <form onSubmit={handleSubmitUpdate} className={styles.editForm}>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="full_name">Họ và tên:</label>
+                        <input type="text" id="full_name" name="full_name" value={formData.full_name} onChange={handleInputChange} required className={styles.inputField} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="date_of_birth">Ngày sinh:</label>
+                        <input type="date" id="date_of_birth" name="date_of_birth" value={formData.date_of_birth} onChange={handleInputChange} className={styles.inputField} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="gender">Giới tính:</label>
+                        <select id="gender" name="gender" value={formData.gender} onChange={handleInputChange} className={styles.inputField}>
+                            <option value="">Chọn giới tính</option>
+                            <option value="Male">Nam</option>
+                            <option value="Female">Nữ</option>
+                            <option value="Other">Khác</option>
+                        </select>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="phone_number">Số điện thoại:</label>
+                        <input type="tel" id="phone_number" name="phone_number" value={formData.phone_number} onChange={handleInputChange} className={styles.inputField} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="address">Địa chỉ:</label>
+                        <textarea id="address" name="address" value={formData.address} onChange={handleInputChange} className={styles.textareaField}></textarea>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="blood_type">Nhóm máu:</label>
+                        <input type="text" id="blood_type" name="blood_type" value={formData.blood_type} onChange={handleInputChange} className={styles.inputField} />
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="allergies">Dị ứng:</label>
+                        <textarea id="allergies" name="allergies" value={formData.allergies} onChange={handleInputChange} className={styles.textareaField}></textarea>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="chronic_conditions">Bệnh mãn tính:</label>
+                        <textarea id="chronic_conditions" name="chronic_conditions" value={formData.chronic_conditions} onChange={handleInputChange} className={styles.textareaField}></textarea>
+                    </div>
+                    <div className={styles.formActions}>
+                        <button type="submit" disabled={isSubmitting} className={styles.saveButton}>
+                            {isSubmitting ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+                        </button>
+                        <button type="button" onClick={handleEditToggle} disabled={isSubmitting} className={styles.cancelButton}>
+                            Hủy
+                        </button>
+                    </div>
+                </form>
+            )}
         </div>
     );
 }
