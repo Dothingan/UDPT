@@ -97,7 +97,7 @@
 }
 
 .saveButton,
-.cancelButton {
+.cancelButton, button {
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
@@ -107,7 +107,7 @@
     transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
-.saveButton {
+.saveButton, button { 
     background-color: var(--primary-green, #4CAF50);
     color: white;
 }

@@ -110,6 +110,32 @@ router.get('/:patientId', authMiddleware, async (req, res) => {
 });
 
 
+// Endpoint lấy danh sách cuộc hẹn của bệnh nhân
+// router.get('/appointments/me', authMiddleware, async (req, res) => {
+//     try {
+//         console.log('Đang tải lịch hẹn cho user:', req.user.userId);
+//         const userId = req.user.userId;
+//         const appointments = await db('appointments')
+//             .select(
+//                 'appointments.id',
+//                 'appointments.reason_for_visit',
+//                 'appointments.status',
+//                 'doctors.full_name as doctor_name',
+//                 'doctor_schedules.schedule_date as appointment_date',
+//                 db.raw('NULL as clinic_name')
+//             )
+//             .join('doctors', 'appointments.doctor_id', 'doctors.id')
+//             .join('doctor_schedules', 'appointments.doctor_schedule_id', 'doctor_schedules.id')
+//             .where('appointments.patient_user_id', userId); // Thay patient_user_id bằng patient_id nếu cần
+//         console.log('Lịch hẹn đã tải:', appointments);
+//         res.json(appointments);
+//     } catch (error) {
+//         console.error('[PatientRoutes-GET /appointments/me]', error);
+//         res.status(500).json({ message: 'Lỗi server khi tải lịch hẹn.', error: error.message });
+//     }
+// });
+
+
 // UPDATE patient profile (Admin hoặc chính bệnh nhân đó)
 router.put('/:patientId', authMiddleware, async (req, res) => {
     const { patientId } = req.params;
@@ -201,5 +227,170 @@ router.delete('/:patientId', authMiddleware, async (req, res) => {
     }
 });
 
+// // PUT /appointments/:appointmentId
+// router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+//         const { appointmentId } = req.params;
+//         const { reason_for_visit, status } = req.body;
+
+//         const appointment = await db('appointments')
+//             .where({ id: appointmentId, patient_user_id: userId })
+//             .first();
+//         if (!appointment) {
+//             return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
+//         }
+
+//         await db('appointments')
+//             .where({ id: appointmentId })
+//             .update({
+//                 reason_for_visit,
+//                 status,
+//                 updated_at: db.fn.now()
+//             });
+
+//         res.json({ message: 'Cập nhật lịch hẹn thành công.' });
+//     } catch (error) {
+//         console.error('[PatientRoutes-PUT /appointments/:appointmentId]', error);
+//         res.status(500).json({ message: 'Lỗi server.' });
+//     }
+// });
+
+// // DELETE /appointments/:appointmentId
+// router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+//     try {
+//         const userId = req.user.userId;
+//         const { appointmentId } = req.params;
+
+//         const appointment = await db('appointments')
+//             .where({ id: appointmentId, patient_user_id: userId })
+//             .first();
+//         if (!appointment) {
+//             return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
+//         }
+
+//         await db('appointments')
+//             .where({ id: appointmentId })
+//             .del();
+
+//         res.json({ message: 'Xóa lịch hẹn thành công.' });
+//     } catch (error) {
+//         console.error('[PatientRoutes-DELETE /appointments/:appointmentId]', error);
+//         res.status(500).json({ message: 'Lỗi server.' });
+//     }
+// });
+// // export const getMyPatientProfile = async () => {
+// //     try {
+// //         // Assuming `axios` is set up with the base URL already
+// //         const response = await axios.get('/patients/me'); // Sends GET request to /patients/me
+// //         return response.data; // Returns the patient profile data
+// //     } catch (error) {
+// //         console.error('Error fetching patient profile:', error);
+// //         throw error; // Propagate the error
+// //     }
+// // };
+// // // services/patientService.js
+// // import axios from 'axios';
+
+// // // Update the patient's profile for the logged-in user
+// // export const updatePatientProfile = async (patientId, updatedData) => {
+// //     try {
+// //         // Assuming `axios` is set up with the base URL already
+// //         const response = await axios.put(`/patients/${patientId}`, updatedData);
+// //         return response.data; // Return the success message or updated profile
+// //     } catch (error) {
+// //         console.error('Error updating patient profile:', error);
+// //         throw error; // Propagate the error
+// //     }
+// // };
+
+
+
+
+// module.exports = router;
+router.get('/appointments/me', authMiddleware, async (req, res) => {
+    try {
+        console.log('Đang tải lịch hẹn cho user:', req.user.userId);
+        const userId = req.user.userId;
+        const [appointments] = await db.query(
+            `SELECT appointments.id,
+                    appointments.reason_for_visit,
+                    appointments.status,
+                    doctors.full_name AS doctor_name,
+                    doctor_schedules.schedule_date AS appointment_date,
+                    NULL AS clinic_name
+             FROM appointments
+             JOIN doctors ON appointments.doctor_id = doctors.id
+             JOIN doctor_schedules ON appointments.doctor_schedule_id = doctor_schedules.id
+             WHERE appointments.patient_user_id = ?`,
+            [userId]
+        );
+        console.log('Lịch hẹn đã tải:', appointments);
+        res.json(appointments);
+    } catch (error) {
+        console.error('[PatientRoutes-GET /appointments/me]', error.message, error.sqlMessage);
+        res.status(500).json({
+            message: 'Lỗi server khi tải lịch hẹn.',
+            error: error.message,
+            sqlMessage: error.sqlMessage
+        });
+    }
+});
+
+router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+    try {
+        console.log('Đang cập nhật lịch hẹn:', req.params.appointmentId, 'cho user:', req.user.userId);
+        const userId = req.user.userId;
+        const { appointmentId } = req.params;
+        const { reason_for_visit, status } = req.body;
+
+        const [appointment] = await db.query(
+            'SELECT * FROM appointments WHERE id = ? AND patient_user_id = ?',
+            [appointmentId, userId]
+        );
+        if (!appointment.length) {
+            return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
+        }
+
+        await db.query(
+            'UPDATE appointments SET reason_for_visit = ?, status = ?, updated_at = NOW() WHERE id = ?',
+            [reason_for_visit, status, appointmentId]
+        );
+        res.json({ message: 'Cập nhật lịch hẹn thành công.' });
+    } catch (error) {
+        console.error('[PatientRoutes-PUT /appointments/:appointmentId]', error.message, error.sqlMessage);
+        res.status(500).json({
+            message: 'Lỗi server khi cập nhật lịch hẹn.',
+            error: error.message,
+            sqlMessage: error.sqlMessage
+        });
+    }
+});
+
+router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+    try {
+        console.log('Đang xóa lịch hẹn:', req.params.appointmentId, 'cho user:', req.user.userId);
+        const userId = req.user.userId;
+        const { appointmentId } = req.params;
+
+        const [appointment] = await db.query(
+            'SELECT * FROM appointments WHERE id = ? AND patient_user_id = ?',
+            [appointmentId, userId]
+        );
+        if (!appointment.length) {
+            return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
+        }
+
+        await db.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
+        res.json({ message: 'Xóa lịch hẹn thành công.' });
+    } catch (error) {
+        console.error('[PatientRoutes-DELETE /appointments/:appointmentId]', error.message, error.sqlMessage);
+        res.status(500).json({
+            message: 'Lỗi server khi xóa lịch hẹn.',
+            error: error.message,
+            sqlMessage: error.sqlMessage
+        });
+    }
+});
 
 module.exports = router;

@@ -106,13 +106,31 @@ router.post('/', authMiddleware, async (req, res) => {
         if (error.code === 'ER_DUP_ENTRY' && error.message.includes('appointments.doctor_schedule_id')) {
             return res.status(409).json({ message: 'This schedule slot has already been booked (duplicate entry).', error: error.message });
         }
-        res.status(500).json({ message: 'Failed to create appointment.', error: error.message });
+        res.status(500).json({ message: 'Failed to create appointment.', error: error.message, stack: error.stac });
     } finally {
         if (connection) connection.release(); // Luôn giải phóng connection
     }
 });
 
+router.post('/appointments', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(401).json({ message: 'Yêu cầu xác thực người dùng.' });
+        }
+        const { doctor_id, doctor_schedule_id, reason_for_visit } = req.body;
+        console.log('Đang tạo lịch hẹn cho user:', userId, 'với dữ liệu:', req.body);
 
+        const [result] = await db.query(
+            'INSERT INTO appointments (patient_user_id, doctor_id, doctor_schedule_id, status, reason_for_visit) VALUES (?, ?, ?, ?, ?)',
+            [userId, doctor_id, doctor_schedule_id, 'PENDING', reason_for_visit]
+        );
+        res.status(201).json({ message: 'Tạo lịch hẹn thành công.', appointmentId: result.insertId });
+    } catch (error) {
+        console.error('[BookingRoutes-POST] Lỗi tạo lịch hẹn:', error);
+        res.status(500).json({ message: 'Lỗi server khi tạo lịch hẹn.', error: error.message });
+    }
+});
 // Các API khác cho GET, PUT, DELETE appointments sẽ được thêm sau
 // GET /appointments/my (lấy lịch hẹn của bệnh nhân đang đăng nhập)
 // GET /appointments/doctor/:doctorId (lấy lịch hẹn của bác sĩ)
