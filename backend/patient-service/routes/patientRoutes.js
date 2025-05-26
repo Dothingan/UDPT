@@ -342,7 +342,7 @@ router.get('/appointments/me', authMiddleware, async (req, res) => {
 });
 
 
-router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+router.put('/appointments/:id', authMiddleware, async (req, res) => {
     try {
         console.log('Đang cập nhật lịch hẹn:', req.params.appointmentId, 'cho user:', req.user.userId);
         const userId = req.user.userId;
@@ -414,12 +414,12 @@ router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
         }
 
         query += ' WHERE id = ?';
-        queryParams.push(appointmentId);
+        queryParams.push(id);
 
         await db.query(query, queryParams);
         res.json({ message: 'Cập nhật lịch hẹn thành công.', updates });
     } catch (error) {
-        console.error('[PatientRoutes-PUT /appointments/:appointmentId]', {
+        console.error('[PatientRoutes-PUT /appointments/:id]', {
             message: error.message,
             sqlMessage: error.sqlMessage,
             stack: error.stack
@@ -434,22 +434,22 @@ router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
 
 
 
-router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+router.delete('/appointments/:id', authMiddleware, async (req, res) => {
     const userId = req.user.userId; // Lấy userId từ token
-    const { appointmentId } = req.params;
+    const { id } = req.params;
 
     // Kiểm tra xem appointmentId có phải là số nguyên không
-    if (isNaN(parseInt(appointmentId))) {
+    if (isNaN(parseInt(id))) {
         return res.status(400).json({ message: 'Appointment ID must be an integer.' });
     }
 
     try {
-        console.log('Đang xóa lịch hẹn:', appointmentId, 'cho user:', userId);
+        console.log('Đang xóa lịch hẹn:', id, 'cho user:', userId);
 
         // Kiểm tra xem lịch hẹn có tồn tại và thuộc về người dùng không
         const [appointment] = await db.query(
             'SELECT doctor_schedule_id FROM appointments WHERE id = ? AND patient_user_id = ?',
-            [appointmentId, userId]
+            [id, userId]
         );
 
         if (!appointment.length) {
@@ -460,14 +460,14 @@ router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) =
         await db.query('UPDATE doctor_schedules SET is_booked = FALSE WHERE id = ?', [appointment[0].doctor_schedule_id]);
 
         // Xóa lịch hẹn
-        const [result] = await db.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
+        const [result] = await db.query('DELETE FROM appointments WHERE id = ?', [id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Lịch hẹn không tồn tại.' });
         }
 
         res.json({ message: 'Xóa lịch hẹn thành công.' });
     } catch (error) {
-        console.error(`[PatientRoutes-DELETE /appointments/:appointmentId] Error deleting appointment ${appointmentId}:`, error);
+        console.error(`[PatientRoutes-DELETE /appointments/:id] Error deleting appointment ${appointmentId}:`, error);
         res.status(500).json({
             message: 'Lỗi server khi xóa lịch hẹn.',
             error: error.message,

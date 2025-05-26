@@ -1,44 +1,50 @@
+
+
 services:
   db:
     image: mysql:8.0
     container_name: medical_mysql_db
-    restart: unless-stopped
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: ${MYSQL_DATABASE}  # Sử dụng cú pháp đúng
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}  # Sử dụng cú pháp đúng
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4  # Thiết lập charset mặc định là utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci  # Thiết lập collation mặc định
     ports:
-      - "${MYSQL_HOST_PORT:-3306}:3306" # Map cổng 3306 của container ra cổng trên máy host (mặc định 3306)
+      - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql # Giữ lại dữ liệu DB khi container bị xóa/tạo lại
+      - mysql_data:/var/lib/mysql
+      - ./medical_booking_db:/docker-entrypoint-initdb.d
+    command: --host-cache-size=0
     networks:
       - medical_app_network
-    healthcheck: # Kiểm tra sức khỏe của MySQL
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]  # Sử dụng cú pháp đúng
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s # Cho MySQL thời gian khởi tạo ban đầu
+      start_period: 30s
 
   auth-service:
     build:
-      context: ./backend/auth-service # Đường dẫn đến thư mục chứa Dockerfile của Auth Service
+      context: ./backend/auth-service
       dockerfile: Dockerfile
     container_name: medical_auth_service
-    restart: unless-stopped
-    ports:
-      - "3001:3001" # Map port 3001 của container ra port 3001 của máy host
+    restart: always
     environment:
-      DB_HOST: db # Tên service của MySQL container
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE}
-      AUTH_SERVICE_PORT: 3001 # Port service lắng nghe bên trong container
-      JWT_SECRET: ${JWT_SECRET}
+      DB_USER: ${DB_USER}  # Sử dụng cú pháp đúng
+      DB_PASSWORD: ${DB_PASSWORD}  # Sử dụng cú pháp đúng
+      DB_HOST: ${DB_HOST}  # Sử dụng cú pháp đúng
+      DB_PORT: ${DB_PORT}  # Sử dụng cú pháp đúng
+      DB_NAME: ${DB_NAME}  # Sử dụng cú pháp đúng
+      JWT_SECRET: ${JWT_SECRET}  # Sử dụng cú pháp đúng
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
     depends_on:
       db:
-        condition: service_healthy # Khởi động sau khi 'db' service đã "healthy"
+        condition: service_healthy
     networks:
       - medical_app_network
 
@@ -47,43 +53,42 @@ services:
       context: ./backend/doctor-service
       dockerfile: Dockerfile
     container_name: medical_doctor_service
-    restart: unless-stopped
+    restart: always
+    environment:
+      DB_USER: ${DB_USER}  # Sử dụng cú pháp đúng
+      DB_PASSWORD: ${DB_PASSWORD}  # Sử dụng cú pháp đúng
+      DB_HOST: ${DB_HOST}  # Sử dụng cú pháp đúng
+      DB_PORT: ${DB_PORT}  # Sử dụng cú pháp đúng
+      DB_NAME: ${DB_NAME}  # Sử dụng cú pháp đúng
+      JWT_SECRET: ${JWT_SECRET}  # Sử dụng cú pháp đúng
+      NODE_ENV: production
     ports:
       - "3002:3002"
-    environment:
-      DB_HOST: db
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE}
-      DOCTOR_SERVICE_PORT: 3002
-      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
     networks:
       - medical_app_network
 
-  booking-service: # Service quản lý đặt lịch
+  booking-service:
     build:
-      context: ./backend/booking-service # Đường dẫn đến thư mục chứa Dockerfile của Booking Service
+      context: ./backend/booking-service
       dockerfile: Dockerfile
     container_name: medical_booking_service
-    restart: unless-stopped
-    ports:
-      - "3003:3003" # Map port 3003 của container ra port 3003 của máy host
+    restart: always
     environment:
-      DB_HOST: db
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE}
-      BOOKING_SERVICE_PORT: 3003 # Port service lắng nghe bên trong container
-      JWT_SECRET: ${JWT_SECRET}
-      DOCTOR_SERVICE_URL: http://doctor-service:3002 # URL để Booking Service gọi nội bộ đến Doctor Service
+      DB_USER: ${DB_USER}  # Sử dụng cú pháp đúng
+      DB_PASSWORD: ${DB_PASSWORD}  # Sử dụng cú pháp đúng
+      DB_HOST: ${DB_HOST}  # Sử dụng cú pháp đúng
+      DB_PORT: ${DB_PORT}  # Sử dụng cú pháp đúng
+      DB_NAME: ${DB_NAME}  # Sử dụng cú pháp đúng
+      JWT_SECRET: ${JWT_SECRET}  # Sử dụng cú pháp đúng
+      NODE_ENV: production
+    ports:
+      - "3003:3003"
     depends_on:
       db:
         condition: service_healthy
-      doctor-service: # Booking service có thể cần doctor-service chạy trước
-        condition: service_started # Hoặc service_healthy nếu doctor-service có healthcheck
     networks:
       - medical_app_network
 
@@ -92,21 +97,34 @@ services:
       context: ./backend/patient-service
       dockerfile: Dockerfile
     container_name: medical_patient_service
-    restart: unless-stopped
+    restart: always
+    environment:
+      DB_USER: ${DB_USER}  # Sử dụng cú pháp đúng
+      DB_PASSWORD: ${DB_PASSWORD}  # Sử dụng cú pháp đúng
+      DB_HOST: ${DB_HOST}  # Sử dụng cú pháp đúng
+      DB_PORT: ${DB_PORT}  # Sử dụng cú pháp đúng
+      DB_NAME: ${DB_NAME}  # Sử dụng cú pháp đúng
+      JWT_SECRET: ${JWT_SECRET}  # Sử dụng cú pháp đúng
+      NODE_ENV: production
     ports:
       - "3004:3004"
-    environment:
-      DB_HOST: db
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE}
-      PATIENT_SERVICE_PORT: 3004
-      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       db:
         condition: service_healthy
     networks:
       - medical_app_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medical_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - medical_app_network
+    command:
 
 # Định nghĩa mạng chung cho các service giao tiếp với nhau
 networks:
