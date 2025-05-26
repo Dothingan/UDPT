@@ -351,6 +351,7 @@ export const updateAppointment = async (appointmentId, data) => {
     }
 };
 
+
 export const deleteAppointment = async (appointmentId) => {
     const token = getToken();
     if (!token) throw createErrorObject('Vui lòng đăng nhập.', { requiresLogin: true });
@@ -361,5 +362,31 @@ export const deleteAppointment = async (appointmentId) => {
         return response.data;
     } catch (error) {
         throw error.response?.data || createErrorObject('Không thể xóa lịch hẹn.');
+    }
+};
+
+export const getDoctors = async () => {
+    const token = getToken();
+    if (!token) throw createErrorObject('Vui lòng đăng nhập.', { requiresLogin: true });
+    try {
+        const response = await axios.get(`${API_URL}/doctors`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || createErrorObject('Không thể tải danh sách bác sĩ.');
+    }
+};
+
+export const getAvailableSchedules = async (doctorId) => {
+    const token = getToken();
+    if (!token) throw createErrorObject('Vui lòng đăng nhập.', { requiresLogin: true });
+    try {
+        const response = await axios.get(`${API_URL}/doctors/${doctorId}/schedules?available=true`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || createErrorObject('Không thể tải lịch trống.');
     }
 };

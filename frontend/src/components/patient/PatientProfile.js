@@ -808,37 +808,41 @@ function PatientProfile() {
     };
 
     // Handle edit appointment
-    const handleEditAppointment = async (appointmentId, reasonForVisit) => {
+    const handleEditAppointment = async (appointmentId) => {
         try {
-            setAppointmentsLoading(true);
+            const reason = prompt('Nhập lý do khám mới:', '');
+            const status = prompt('Nhập trạng thái mới (PENDING, CONFIRMED, CANCELLED):', 'PENDING');
+            if (!reason || !status) {
+                setAppointmentsError('Vui lòng nhập đầy đủ thông tin.');
+                return;
+            }
+            if (!['PENDING', 'CONFIRMED', 'CANCELLED'].includes(status.toUpperCase())) {
+                setAppointmentsError('Trạng thái không hợp lệ. Chọn PENDING, CONFIRMED, hoặc CANCELLED.');
+                return;
+            }
+            const data = { reason_for_visit: reason, status: status.toUpperCase() };
+            console.log('Đang sửa lịch hẹn:', { appointmentId, data });
+            await updateAppointment(appointmentId, data);
             setAppointmentsError('');
-            const updatedData = { reason_for_visit: reasonForVisit, status: 'PENDING' };
-            await updateAppointment(appointmentId, updatedData);
-            setMessage('Cập nhật lịch hẹn thành công!');
-            await fetchAppointments();
-        } catch (err) {
-            console.error('Edit appointment error:', err);
-            setAppointmentsError(err.message || 'Không thể cập nhật lịch hẹn. Vui lòng thử lại sau.');
-        } finally {
-            setAppointmentsLoading(false);
+            alert('Cập nhật lịch hẹn thành công.');
+            fetchAppointments(); // Làm mới danh sách
+        } catch (error) {
+            console.error('Lỗi sửa lịch hẹn:', error);
+            setAppointmentsError(error.message || 'Không thể cập nhật lịch hẹn.');
         }
     };
 
-    // Handle delete appointment
     const handleDeleteAppointment = async (appointmentId) => {
-        if (window.confirm('Bạn có chắc muốn xóa lịch hẹn này?')) {
-            try {
-                setAppointmentsLoading(true);
-                setAppointmentsError('');
-                await deleteAppointment(appointmentId);
-                setMessage('Xóa lịch hẹn thành công!');
-                await fetchAppointments();
-            } catch (err) {
-                console.error('Delete appointment error:', err);
-                setAppointmentsError(err.message || 'Không thể xóa lịch hẹn. Vui lòng thử lại sau.');
-            } finally {
-                setAppointmentsLoading(false);
-            }
+        if (!window.confirm('Bạn có chắc muốn xóa lịch hẹn này?')) return;
+        try {
+            console.log('Đang xóa lịch hẹn:', appointmentId);
+            await deleteAppointment(appointmentId);
+            setAppointmentsError('');
+            alert('Xóa lịch hẹn thành công.');
+            fetchAppointments(); // Làm mới danh sách
+        } catch (error) {
+            console.error('Lỗi xóa lịch hẹn:', error);
+            setAppointmentsError(error.message || 'Không thể xóa lịch hẹn.');
         }
     };
 
@@ -1062,25 +1066,29 @@ function PatientProfile() {
                                         <div>
                                             <strong>Trạng thái:</strong> {app.status || 'N/A'}
                                         </div>
-                                        <div className={styles.appointmentActions}>
-                                            <button
-                                                onClick={() => {
-                                                    const reason = prompt('Nhập lý do khám mới:', app.reason_for_visit || '');
-                                                    if (reason !== null) {
-                                                        handleEditAppointment(app.id, reason);
+                                    <div className={styles.appointmentActions}>
+                                        <button
+                                            onClick={() => {
+                                                const doctorId = prompt('Nhập ID bác sĩ mới:', app.doctor_id || '');
+                                                if (doctorId !== null) {
+                                                    const appointmentDate = prompt('Nhập thời gian khám mới (định dạng: YYYY-MM-DD HH:mm):', app.appointment_date || '');
+                                                    if (appointmentDate !== null) {
+                                                        handleEditAppointment(app.id, doctorId, appointmentDate);
                                                     }
-                                                }}
-                                                className={styles.editButton}
-                                            >
-                                                Sửa
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteAppointment(app.id)}
-                                                className={styles.cancelButton}
-                                            >
-                                                Xóa
-                                            </button>
-                                        </div>
+                                                }
+                                            }}
+                                            className={styles.editButton}
+                                        >
+                                            Sửa
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteAppointment(app.id)}
+                                            className={styles.cancelButton}
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
+
                                     </li>
                                 ))}
                             </ul>

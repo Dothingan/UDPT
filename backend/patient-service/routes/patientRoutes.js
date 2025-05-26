@@ -328,7 +328,11 @@ router.get('/appointments/me', authMiddleware, async (req, res) => {
         console.log('Lịch hẹn đã tải:', appointments);
         res.json(appointments);
     } catch (error) {
-        console.error('[PatientRoutes-GET /appointments/me]', error.message, error.sqlMessage);
+        console.error('[PatientRoutes-GET /appointments/me]', {
+            message: error.message,
+            sqlMessage: error.sqlMessage,
+            stack: error.stack
+        });
         res.status(500).json({
             message: 'Lỗi server khi tải lịch hẹn.',
             error: error.message,
@@ -337,13 +341,15 @@ router.get('/appointments/me', authMiddleware, async (req, res) => {
     }
 });
 
+
 router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
     try {
         console.log('Đang cập nhật lịch hẹn:', req.params.appointmentId, 'cho user:', req.user.userId);
         const userId = req.user.userId;
         const { appointmentId } = req.params;
-        const { reason_for_visit, status } = req.body;
+        const { reason_for_visit, status, doctor_id, doctor_schedule_id } = req.body;
 
+        // Kiểm tra lịch hẹn tồn tại và thuộc về người dùng
         const [appointment] = await db.query(
             'SELECT * FROM appointments WHERE id = ? AND patient_user_id = ?',
             [appointmentId, userId]
@@ -352,13 +358,72 @@ router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
         }
 
-        await db.query(
-            'UPDATE appointments SET reason_for_visit = ?, status = ?, updated_at = NOW() WHERE id = ?',
-            [reason_for_visit, status, appointmentId]
-        );
-        res.json({ message: 'Cập nhật lịch hẹn thành công.' });
+        // Chuẩn bị dữ liệu cập nhật
+        const updates = {};
+        const queryParams = [];
+        let query = 'UPDATE appointments SET updated_at = NOW()';
+
+        // Cập nhật lý do khám
+        if (reason_for_visit) {
+            updates.reason_for_visit = reason_for_visit;
+            query += ', reason_for_visit = ?';
+            queryParams.push(reason_for_visit);
+        }
+
+        // Cập nhật trạng thái
+        if (status && ['PENDING', 'CONFIRMED', 'CANCELLED'].includes(status)) {
+            updates.status = status;
+            query += ', status = ?';
+            queryParams.push(status);
+        } else if (status) {
+            return res.status(400).json({ message: 'Trạng thái không hợp lệ. Chọn PENDING, CONFIRMED, hoặc CANCELLED.' });
+        }
+
+        // Cập nhật bác sĩ
+        if (doctor_id) {
+            const [doctor] = await db.query('SELECT id FROM doctors WHERE id = ?', [doctor_id]);
+            if (!doctor.length) {
+                return res.status(404).json({ message: 'Bác sĩ không tồn tại.' });
+            }
+            updates.doctor_id = doctor_id;
+            query += ', doctor_id = ?';
+            queryParams.push(doctor_id);
+        }
+
+        // Cập nhật lịch khám
+        if (doctor_schedule_id) {
+            const [schedule] = await db.query(
+                'SELECT id, is_booked FROM doctor_schedules WHERE id = ? AND is_booked = FALSE',
+                [doctor_schedule_id]
+            );
+            if (!schedule.length) {
+                return res.status(400).json({ message: 'Lịch khám không tồn tại hoặc đã được đặt.' });
+            }
+            updates.doctor_schedule_id = doctor_schedule_id;
+            query += ', doctor_schedule_id = ?';
+            queryParams.push(doctor_schedule_id);
+
+            // Cập nhật trạng thái is_booked cho lịch mới
+            await db.query('UPDATE doctor_schedules SET is_booked = TRUE WHERE id = ?', [doctor_schedule_id]);
+            // Mở khóa lịch cũ
+            await db.query('UPDATE doctor_schedules SET is_booked = FALSE WHERE id = ?', [appointment[0].doctor_schedule_id]);
+        }
+
+        if (queryParams.length === 0) {
+            return res.status(400).json({ message: 'Không có dữ liệu để cập nhật.' });
+        }
+
+        query += ' WHERE id = ?';
+        queryParams.push(appointmentId);
+
+        await db.query(query, queryParams);
+        res.json({ message: 'Cập nhật lịch hẹn thành công.', updates });
     } catch (error) {
-        console.error('[PatientRoutes-PUT /appointments/:appointmentId]', error.message, error.sqlMessage);
+        console.error('[PatientRoutes-PUT /appointments/:appointmentId]', {
+            message: error.message,
+            sqlMessage: error.sqlMessage,
+            stack: error.stack
+        });
         res.status(500).json({
             message: 'Lỗi server khi cập nhật lịch hẹn.',
             error: error.message,
@@ -367,29 +432,75 @@ router.put('/appointments/:appointmentId', authMiddleware, async (req, res) => {
     }
 });
 
-router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) => {
-    try {
-        console.log('Đang xóa lịch hẹn:', req.params.appointmentId, 'cho user:', req.user.userId);
-        const userId = req.user.userId;
-        const { appointmentId } = req.params;
 
+
+router.delete('/appointments/:appointmentId', authMiddleware, async (req, res) => {
+    const userId = req.user.userId; // Lấy userId từ token
+    const { appointmentId } = req.params;
+
+    // Kiểm tra xem appointmentId có phải là số nguyên không
+    if (isNaN(parseInt(appointmentId))) {
+        return res.status(400).json({ message: 'Appointment ID must be an integer.' });
+    }
+
+    try {
+        console.log('Đang xóa lịch hẹn:', appointmentId, 'cho user:', userId);
+
+        // Kiểm tra xem lịch hẹn có tồn tại và thuộc về người dùng không
         const [appointment] = await db.query(
-            'SELECT * FROM appointments WHERE id = ? AND patient_user_id = ?',
+            'SELECT doctor_schedule_id FROM appointments WHERE id = ? AND patient_user_id = ?',
             [appointmentId, userId]
         );
+
         if (!appointment.length) {
             return res.status(404).json({ message: 'Lịch hẹn không tồn tại hoặc không thuộc về bạn.' });
         }
 
-        await db.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
+        // Mở khóa lịch cũ
+        await db.query('UPDATE doctor_schedules SET is_booked = FALSE WHERE id = ?', [appointment[0].doctor_schedule_id]);
+
+        // Xóa lịch hẹn
+        const [result] = await db.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Lịch hẹn không tồn tại.' });
+        }
+
         res.json({ message: 'Xóa lịch hẹn thành công.' });
     } catch (error) {
-        console.error('[PatientRoutes-DELETE /appointments/:appointmentId]', error.message, error.sqlMessage);
+        console.error(`[PatientRoutes-DELETE /appointments/:appointmentId] Error deleting appointment ${appointmentId}:`, error);
         res.status(500).json({
             message: 'Lỗi server khi xóa lịch hẹn.',
             error: error.message,
             sqlMessage: error.sqlMessage
         });
+    }
+});
+
+
+router.get('/doctors', authMiddleware, async (req, res) => {
+    try {
+        const [doctors] = await db.query('SELECT id, full_name FROM doctors');
+        res.json(doctors);
+    } catch (error) {
+        console.error('[PatientRoutes-GET /doctors]', error);
+        res.status(500).json({ message: 'Lỗi server khi tải danh sách bác sĩ.' });
+    }
+});
+
+router.get('/doctors/:doctorId/schedules', authMiddleware, async (req, res) => {
+    try {
+        const { doctorId } = req.params;
+        const { available } = req.query;
+        let query = 'SELECT id, schedule_date, start_time, end_time FROM doctor_schedules WHERE doctor_id = ?';
+        const params = [doctorId];
+        if (available === 'true') {
+            query += ' AND is_booked = FALSE';
+        }
+        const [schedules] = await db.query(query, params);
+        res.json(schedules);
+    } catch (error) {
+        console.error('[PatientRoutes-GET /doctors/:doctorId/schedules]', error);
+        res.status(500).json({ message: 'Lỗi server khi tải lịch bác sĩ.' });
     }
 });
 

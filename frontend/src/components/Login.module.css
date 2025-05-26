@@ -25,16 +25,16 @@
 }
 
 .formGroup input {
-    width: calc(100% - 20px); /* Trừ padding */
+    width: calc(100%); /* Trừ padding */
     padding: 10px;
-    border: 1px solid var(--grey-medium);
-    border-radius: 4px;
+    border: 1px solid rgb(216, 216, 216);
+    border-radius: 10px;
     font-size: 1rem;
 }
 
 .button {
-    background-color: var(--primary-green-accent);
     color: var(--text-light);
+    margin: 20px 0px ;
     padding: 12px 20px;
     border: none;
     border-radius: 4px;
