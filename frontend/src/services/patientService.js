@@ -167,7 +167,6 @@ const createErrorObject = (message, details = {}) => {
     return error;
 };
 
-// Hàm lấy thông tin hồ sơ bệnh nhân của người dùng đang đăng nhập
 export const getMyPatientProfile = async () => {
     const token = getToken();
     if (!token) {
